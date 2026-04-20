@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NFA ↔ DFA Simulator | Theory of Computation</title>
+  <meta name="description" content="Interactive NFA to DFA conversion simulator with subset construction, DFA minimization, and step-by-step string simulation." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <div class="bg-orbs">
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+  </div>
+
+  <header class="header">
+    <div class="header-inner">
+      <div class="logo">
+        <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
+          <circle cx="18" cy="18" r="17" stroke="url(#lg1)" stroke-width="2"/>
+          <circle cx="18" cy="18" r="8" fill="url(#lg2)" opacity="0.8"/>
+          <circle cx="18" cy="12" r="3" fill="#a78bfa"/>
+          <circle cx="26" cy="22" r="3" fill="#60a5fa"/>
+          <circle cx="10" cy="22" r="3" fill="#f472b6"/>
+          <line x1="18" y1="14" x2="25" y2="20" stroke="#a78bfa" stroke-width="1.5"/>
+          <line x1="18" y1="14" x2="11" y2="20" stroke="#f472b6" stroke-width="1.5"/>
+          <defs>
+            <linearGradient id="lg1" x1="0" y1="0" x2="36" y2="36">
+              <stop stop-color="#a78bfa"/><stop offset="1" stop-color="#60a5fa"/>
+            </linearGradient>
+            <linearGradient id="lg2" x1="0" y1="0" x2="36" y2="36">
+              <stop stop-color="#a78bfa" stop-opacity="0.2"/><stop offset="1" stop-color="#60a5fa" stop-opacity="0.2"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <span>AutomataLab</span>
+      </div>
+      <nav class="tabs">
+        <button class="tab active" data-tab="builder" id="tab-builder">🔨 NFA Builder</button>
+        <button class="tab" data-tab="convert" id="tab-convert">⚡ NFA → DFA</button>
+        <button class="tab" data-tab="minimize" id="tab-minimize">🔬 DFA Minimize</button>
+        <button class="tab" data-tab="simulate" id="tab-simulate">▶ Simulate</button>
+        <button class="tab" data-tab="theory" id="tab-theory">📖 Theory</button>
+      </nav>
+    </div>
+  </header>
+
+  <main class="main">
+    <!-- ======================== NFA BUILDER ======================== -->
+    <section class="panel active" id="panel-builder">
+      <div class="panel-header">
+        <h1>NFA Builder</h1>
+        <p>Design your Nondeterministic Finite Automaton — add states, transitions, and epsilon moves</p>
+      </div>
+      <div class="builder-layout">
+        <div class="controls-col">
+          <div class="card">
+            <h3 class="card-title">📐 Automaton Settings</h3>
+            <div class="field-group">
+              <label>Alphabet (comma-separated)</label>
+              <input type="text" id="alphabet-input" value="a,b" placeholder="a,b,c" />
+            </div>
+            <div class="field-group">
+              <label>States</label>
+              <div class="state-list" id="state-list"></div>
+              <button class="btn btn-sm btn-outline" id="add-state-btn">+ Add State</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">➕ Add Transition</h3>
+            <div class="field-group">
+              <label>From State</label>
+              <select id="trans-from"></select>
+            </div>
+            <div class="field-group">
+              <label>Symbol (ε for epsilon)</label>
+              <select id="trans-symbol"></select>
+            </div>
+            <div class="field-group">
+              <label>To State</label>
+              <select id="trans-to"></select>
+            </div>
+            <button class="btn btn-primary" id="add-trans-btn">Add Transition</button>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">📋 Transition Table</h3>
+            <div id="trans-table-wrapper" class="table-wrapper"></div>
+          </div>
+
+          <div class="presets-card card">
+            <h3 class="card-title">🎯 Example NFAs</h3>
+            <div class="preset-grid">
+              <button class="preset-btn" data-preset="ends-ab">Ends with "ab"</button>
+              <button class="preset-btn" data-preset="contains-aa">Contains "aa"</button>
+              <button class="preset-btn" data-preset="epsilon-closure">ε-NFA Example</button>
+              <button class="preset-btn" data-preset="odd-a">Odd number of a's</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="canvas-col">
+          <div class="card canvas-card">
+            <div class="canvas-toolbar">
+              <span class="canvas-label">NFA State Diagram</span>
+              <div class="canvas-actions">
+                <button class="btn btn-xs btn-ghost" id="layout-btn">⟳ Auto-layout</button>
+                <button class="btn btn-xs btn-ghost" id="clear-canvas-btn">🗑 Clear All</button>
+              </div>
+            </div>
+            <div class="canvas-wrap">
+              <svg id="nfa-canvas" width="100%" height="520"></svg>
+            </div>
+            <div class="canvas-hint">💡 Drag states to reposition • Double-click canvas to add state</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== NFA → DFA ======================== -->
+    <section class="panel" id="panel-convert">
+      <div class="panel-header">
+        <h1>Subset Construction</h1>
+        <p>Convert NFA to DFA using the Powerset/Subset Construction algorithm — watch it unfold step by step</p>
+      </div>
+      <div class="convert-layout">
+        <div class="steps-col">
+          <div class="card">
+            <h3 class="card-title">⚙ Algorithm Steps</h3>
+            <div class="algo-controls">
+              <button class="btn btn-primary" id="start-convert-btn">▶ Start Conversion</button>
+              <button class="btn btn-outline" id="step-convert-btn" disabled>→ Next Step</button>
+              <button class="btn btn-outline" id="auto-convert-btn" disabled>⚡ Auto Run</button>
+            </div>
+            <div id="convert-steps" class="steps-list"></div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">📊 ε-Closure Table</h3>
+            <div id="epsilon-table" class="table-wrapper"></div>
+          </div>
+        </div>
+        <div class="canvas-col">
+          <div class="card canvas-card">
+            <div class="canvas-toolbar">
+              <span class="canvas-label">DFA State Diagram</span>
+              <span id="dfa-state-count" class="badge"></span>
+            </div>
+            <div class="canvas-wrap">
+              <svg id="dfa-canvas" width="100%" height="520"></svg>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">📋 DFA Transition Table</h3>
+            <div id="dfa-table-wrapper" class="table-wrapper"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== DFA MINIMIZE ======================== -->
+    <section class="panel" id="panel-minimize">
+      <div class="panel-header">
+        <h1>DFA Minimization</h1>
+        <p>Minimize the DFA using the Table-Filling (Myhill-Nerode) algorithm</p>
+      </div>
+      <div class="minimize-layout">
+        <div class="steps-col">
+          <div class="card">
+            <h3 class="card-title">⚙ Minimization Steps</h3>
+            <div class="algo-controls">
+              <button class="btn btn-primary" id="start-min-btn">▶ Start Minimization</button>
+              <button class="btn btn-outline" id="step-min-btn" disabled>→ Next Step</button>
+              <button class="btn btn-outline" id="auto-min-btn" disabled>⚡ Auto Run</button>
+            </div>
+            <div id="min-steps" class="steps-list"></div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">🔲 Distinguishability Table</h3>
+            <div id="dist-table-wrapper" class="table-wrapper"></div>
+          </div>
+        </div>
+        <div class="canvas-col">
+          <div class="card canvas-card">
+            <div class="canvas-toolbar">
+              <span class="canvas-label">Minimized DFA</span>
+              <span id="min-state-count" class="badge"></span>
+            </div>
+            <div class="canvas-wrap">
+              <svg id="min-canvas" width="100%" height="520"></svg>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">🔗 Equivalence Classes</h3>
+            <div id="equiv-classes" class="equiv-list"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== SIMULATE ======================== -->
+    <section class="panel" id="panel-simulate">
+      <div class="panel-header">
+        <h1>String Simulation</h1>
+        <p>Watch your automaton process input strings step by step with live state highlighting</p>
+      </div>
+      <div class="sim-layout">
+        <div class="sim-controls-col">
+          <div class="card">
+            <h3 class="card-title">🎮 Simulation Controls</h3>
+            <div class="field-group">
+              <label>Select Automaton</label>
+              <div class="radio-group">
+                <label class="radio-label">
+                  <input type="radio" name="sim-auto" value="nfa" checked id="sim-nfa" />
+                  <span>NFA</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="sim-auto" value="dfa" id="sim-dfa" />
+                  <span>DFA (converted)</span>
+                </label>
+                <label class="radio-label">
+                  <input type="radio" name="sim-auto" value="min" id="sim-min" />
+                  <span>Min DFA</span>
+                </label>
+              </div>
+            </div>
+            <div class="field-group">
+              <label>Input String</label>
+              <input type="text" id="sim-input" placeholder="e.g. aabb" />
+            </div>
+            <div class="sim-speed">
+              <label>Speed</label>
+              <input type="range" id="sim-speed" min="100" max="2000" value="800" step="100" />
+              <span id="sim-speed-label">0.8s</span>
+            </div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="sim-start-btn">▶ Run</button>
+              <button class="btn btn-outline" id="sim-step-btn">→ Step</button>
+              <button class="btn btn-ghost" id="sim-reset-btn">↺ Reset</button>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">📍 Current State</h3>
+            <div id="sim-status" class="sim-status">
+              <div class="sim-status-idle">Ready to simulate</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">📜 Computation History</h3>
+            <div id="sim-history" class="sim-history"></div>
+          </div>
+
+          <div class="card">
+            <h3 class="card-title">🧪 Batch Test</h3>
+            <textarea id="batch-input" placeholder="Enter strings, one per line:&#10;ab&#10;aab&#10;ba" rows="5"></textarea>
+            <button class="btn btn-outline" id="batch-run-btn" style="margin-top:8px">Run All Tests</button>
+            <div id="batch-results" class="batch-results"></div>
+          </div>
+        </div>
+
+        <div class="canvas-col">
+          <div class="card canvas-card">
+            <div class="canvas-toolbar">
+              <span class="canvas-label" id="sim-canvas-label">Simulation Canvas</span>
+              <div id="sim-result-badge"></div>
+            </div>
+            <div class="canvas-wrap">
+              <svg id="sim-canvas" width="100%" height="520"></svg>
+            </div>
+          </div>
+          <div class="card">
+            <h3 class="card-title">🔤 Input Tape</h3>
+            <div id="tape-display" class="tape-display"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ======================== THEORY ======================== -->
+    <section class="panel" id="panel-theory">
+      <div class="panel-header">
+        <h1>Theory Reference</h1>
+        <p>Formal definitions and key theorems from Unit 1 & Unit 2 of TOC</p>
+      </div>
+      <div class="theory-grid">
+        <div class="theory-card card">
+          <div class="theory-icon">🤖</div>
+          <h3>DFA (Deterministic Finite Automaton)</h3>
+          <p>A 5-tuple <strong>M = (Q, Σ, δ, q₀, F)</strong> where:</p>
+          <ul>
+            <li><strong>Q</strong> — finite set of states</li>
+            <li><strong>Σ</strong> — finite input alphabet</li>
+            <li><strong>δ: Q × Σ → Q</strong> — total transition function</li>
+            <li><strong>q₀ ∈ Q</strong> — initial state</li>
+            <li><strong>F ⊆ Q</strong> — set of accepting states</li>
+          </ul>
+          <div class="theory-note">The DFA is <em>deterministic</em> — for each (state, symbol) pair there is exactly one next state.</div>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">🌫</div>
+          <h3>NFA (Nondeterministic Finite Automaton)</h3>
+          <p>A 5-tuple <strong>M = (Q, Σ, δ, q₀, F)</strong> where:</p>
+          <ul>
+            <li><strong>δ: Q × (Σ ∪ {ε}) → 2^Q</strong> — transition to a <em>set</em> of states</li>
+            <li>May have <strong>ε-transitions</strong> (move without consuming input)</li>
+            <li>Multiple transitions for same (state, symbol) allowed</li>
+          </ul>
+          <div class="theory-note">NFAs and DFAs accept the <em>same class</em> of languages (Regular Languages).</div>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">⚡</div>
+          <h3>ε-Closure</h3>
+          <p><strong>ε-closure(q)</strong> = set of all states reachable from q via zero or more ε-transitions.</p>
+          <div class="code-block">
+            ε-closure(q) = {q} ∪<br/>
+            &nbsp;&nbsp;∪{ε-closure(p) | p ∈ δ(q, ε)}
+          </div>
+          <p>Extended to sets: <strong>ε-closure(S)</strong> = ∪{ε-closure(q) | q ∈ S}</p>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">🔄</div>
+          <h3>Subset Construction (NFA → DFA)</h3>
+          <ol>
+            <li>Start state = ε-closure({q₀})</li>
+            <li>For each DFA state S and symbol a:<br/>
+              <span class="code-inline">δ_DFA(S, a) = ε-closure(∪{δ_NFA(q,a) | q∈S})</span></li>
+            <li>Mark S as accepting if S ∩ F ≠ ∅</li>
+            <li>Repeat until no new states</li>
+          </ol>
+          <div class="theory-note">Can produce up to <strong>2^n</strong> DFA states from an n-state NFA.</div>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">🔬</div>
+          <h3>DFA Minimization (Table-Filling)</h3>
+          <ol>
+            <li><strong>Base:</strong> Mark (p,q) if exactly one is in F</li>
+            <li><strong>Inductive:</strong> Mark (p,q) if ∃a: (δ(p,a), δ(q,a)) is marked</li>
+            <li>Repeat until no new marks</li>
+            <li>Merge all unmarked pairs into equivalence classes</li>
+          </ol>
+          <div class="theory-note">An unmarked pair (p,q) means p and q are <em>indistinguishable</em> — they can be merged.</div>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">📐</div>
+          <h3>Myhill-Nerode Theorem</h3>
+          <p>A language L is regular iff the <strong>Myhill-Nerode equivalence</strong> relation ≡_L has finitely many equivalence classes.</p>
+          <p>The number of equivalence classes equals the number of states in the <strong>minimal DFA</strong> for L.</p>
+          <div class="theory-note">This gives us a <em>unique</em> (up to isomorphism) minimal DFA for every regular language.</div>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">🔁</div>
+          <h3>Pumping Lemma</h3>
+          <p>If L is regular, ∃ pumping length <strong>p</strong> such that every string w ∈ L with |w| ≥ p can be written as <strong>w = xyz</strong> where:</p>
+          <ul>
+            <li>|y| ≥ 1 &nbsp;(y is non-empty)</li>
+            <li>|xy| ≤ p</li>
+            <li>∀i ≥ 0: xy^i z ∈ L</li>
+          </ul>
+          <div class="theory-note">Used to <em>prove</em> languages are NOT regular (by contradiction).</div>
+        </div>
+
+        <div class="theory-card card">
+          <div class="theory-icon">🌟</div>
+          <h3>Closure Properties</h3>
+          <p>Regular languages are closed under:</p>
+          <ul>
+            <li><strong>Union:</strong> L₁ ∪ L₂</li>
+            <li><strong>Concatenation:</strong> L₁ · L₂</li>
+            <li><strong>Kleene Star:</strong> L*</li>
+            <li><strong>Complement:</strong> L̄</li>
+            <li><strong>Intersection:</strong> L₁ ∩ L₂</li>
+            <li><strong>Reversal:</strong> L^R</li>
+          </ul>
+          <div class="theory-note">All operations on regular languages produce regular languages.</div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast"></div>
+
+  <script src="automata.js"></script>
+  <script src="renderer.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
