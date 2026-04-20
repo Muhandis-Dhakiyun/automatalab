@@ -1,6 +1,0 @@
-Module/Chapter: Unit 1 – Finite Automata (DFA & NFA)
-
-Topic Chosen: Nondeterministic Finite Automata (NFA), NFA-to-DFA Conversion (Subset Construction), and DFA Minimization (Table-Filling / Myhill-Nerode Algorithm)
-
-Simulation Description:
-The application simulates the construction, conversion, and minimization of finite automata — the user can build an NFA with epsilon-transitions using an interactive drag-and-drop canvas, then watch the Subset Construction algorithm convert it step-by-step into an equivalent DFA, followed by the Table-Filling (Myhill-Nerode) algorithm minimizing the DFA by identifying and merging indistinguishable states. It also provides an animated string simulation that highlights active states on the automaton diagram one symbol at a time, along with a live input tape, computation history, and batch string testing to verify acceptance or rejection.
